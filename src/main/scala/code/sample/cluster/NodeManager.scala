@@ -1,8 +1,8 @@
 package code.sample.cluster
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Props}
-import code.sample.cluster.NodeManagerActions.{ActiveNodes, AddNodes, GetActiveNodes}
+import akka.actor.{Actor, ActorRef, Props, Terminated}
+import code.sample.cluster.NodeManagerActions.{ActiveNodes, AddNodes, GetActiveNodes, StopNode}
 import com.codahale.metrics.MetricRegistry
 import akka.pattern._
 import akka.util.Timeout
@@ -42,6 +42,15 @@ class NodeManager(tickDelay: FiniteDuration, registry: MetricRegistry) extends A
     case GetActiveNodes => Future.sequence(
       id2ActiveNode.values.map(node => (node ? NodeActions.GetNodeInfo).mapTo[NodeInfo])
     ).map(nodes => ActiveNodes(nodes.toList.sortBy(_.id))) pipeTo sender()
+
+    case StopNode(id) => sender ! (id2ActiveNode.get(id) match {
+      case None => None
+      case Some(node) =>
+        context.stop(node)
+        id2ActiveNode = id2ActiveNode.filterKeys(_ != id)
+        Some(Done)
+    })
+
   }
 
 }

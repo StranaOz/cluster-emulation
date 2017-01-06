@@ -29,8 +29,13 @@ object RestApi extends JsonSupport {
             }
           }
         }
-      } ~ delete {
-        complete("")
+      }
+    } ~ path("nodes" / IntNumber) { id =>
+      delete {
+        onSuccess(nodeManger ? NodeManagerActions.StopNode(id)) {
+          case None => complete(StatusCodes.NotFound)
+          case Some(Done) => complete(StatusCodes.NoContent)
+        }
       }
     }
 

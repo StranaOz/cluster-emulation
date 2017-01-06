@@ -1,8 +1,9 @@
 package code.sample.cluster
 
-import akka.actor.{Actor, ActorRef, Terminated}
+import akka.Done
+import akka.actor.{Actor, ActorRef, PoisonPill, Terminated}
 import akka.event.Logging
-import code.sample.cluster.NodeActions.{GetNodeInfo, ActiveNodes, SendTick, Tick}
+import code.sample.cluster.NodeActions.{ActiveNodes, GetNodeInfo, SendTick, Tick}
 import com.codahale.metrics.MetricRegistry
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -29,11 +30,17 @@ case class NodeInfo(id: Int,
 
 class Node(id: Int, tickDelay: FiniteDuration, registry: MetricRegistry) extends Actor {
   val log = Logging(context.system, this)
-  val tickMeter = registry.meter(s"${self.path.name}.ticks")
+  val tickMeterName = s"${self.path.name}.ticks"
+  val tickMeter = registry.meter(tickMeterName)
 
   import context.dispatcher
 
-  context.system.scheduler.schedule(Duration.Zero, tickDelay, self, SendTick)
+  val tickSending = context.system.scheduler.schedule(Duration.Zero, tickDelay, self, SendTick)
+
+  override def postStop(): Unit = {
+    registry.remove(tickMeterName)
+    tickSending.cancel()
+  }
 
   var othersNodes = Set.empty[ActorRef]
 
