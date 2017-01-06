@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.pattern._
 import akka.util.Timeout
 import code.sample.cluster.NodeManagerActions
+import spray.json.JsValue
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -16,7 +17,7 @@ object RestApi extends JsonSupport {
   implicit val timeout = Timeout(2 seconds)
 
   def apply(nodeManger: ActorRef) = {
-    val nodesRout = path("nodes") {
+    val nodesRout = path("cluster" / "nodes") {
       get {
         onSuccess(nodeManger ? NodeManagerActions.GetActiveNodes) {
           case nodes: NodeManagerActions.ActiveNodes => complete(nodes)
@@ -30,7 +31,7 @@ object RestApi extends JsonSupport {
           }
         }
       }
-    } ~ path("nodes" / IntNumber) { id =>
+    } ~ path("cluster" / "nodes" / IntNumber) { id =>
       delete {
         onSuccess(nodeManger ? NodeManagerActions.StopNode(id)) {
           case None => complete(StatusCodes.NotFound)
@@ -39,7 +40,20 @@ object RestApi extends JsonSupport {
       }
     }
 
-    nodesRout
+    val clusterRout = path("cluster") {
+      patch {
+        entity(as[JsValue]) { json =>
+          val milliseconds = json.asJsObject.fields("tick-duration").convertTo[Long]
+          validate(milliseconds > 0, "tick-duration must be positive") {
+            onSuccess(nodeManger ? NodeManagerActions.ChangeTickDelay(FiniteDuration(milliseconds, MILLISECONDS))) {
+              case Done => complete(StatusCodes.NoContent)
+            }
+          }
+        }
+      }
+    }
+
+    nodesRout ~ clusterRout
   }
 
 }

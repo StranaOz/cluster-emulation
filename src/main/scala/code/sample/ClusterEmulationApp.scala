@@ -10,7 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-object ClusterEmulationApp extends App with JmxMetrics with Config{
+object ClusterEmulationApp extends App with JmxMetrics with Config {
 
   implicit val system = ActorSystem("cluster-emulation-app")
   implicit val materializer = ActorMaterializer()

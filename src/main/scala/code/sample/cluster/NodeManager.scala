@@ -1,8 +1,8 @@
 package code.sample.cluster
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Props, Terminated}
-import code.sample.cluster.NodeManagerActions.{ActiveNodes, AddNodes, GetActiveNodes, StopNode}
+import akka.actor.{Actor, ActorRef, Props}
+import code.sample.cluster.NodeManagerActions.{ActiveNodes, AddNodes, ChangeTickDelay, GetActiveNodes, StopNode}
 import com.codahale.metrics.MetricRegistry
 import akka.pattern._
 import akka.util.Timeout
@@ -16,11 +16,13 @@ object NodeManagerActions {
   case class AddNodes(count: Int)
   case class StopNode(id: Int)
 
+  case class ChangeTickDelay(newTickDelay: FiniteDuration)
+
   case object GetActiveNodes
   case class ActiveNodes(nodes: Iterable[NodeInfo])
 }
 
-class NodeManager(tickDelay: FiniteDuration, registry: MetricRegistry) extends Actor {
+class NodeManager(var tickDelay: FiniteDuration, registry: MetricRegistry) extends Actor {
 
   implicit val to = Timeout(2 seconds)
   import context.dispatcher
@@ -50,6 +52,11 @@ class NodeManager(tickDelay: FiniteDuration, registry: MetricRegistry) extends A
         id2ActiveNode = id2ActiveNode.filterKeys(_ != id)
         Some(Done)
     })
+
+    case ChangeTickDelay(newTickDelay) =>
+      tickDelay = newTickDelay
+      id2ActiveNode.values.foreach(_ ! NodeActions.NewTickDelay(newTickDelay))
+      sender() ! Done
 
   }
 
