@@ -1,10 +1,12 @@
 package code.sample.cluster
 
-import akka.Done
+import java.util.concurrent.TimeUnit
+
 import akka.actor.{Actor, ActorRef, Terminated}
 import akka.event.Logging
 import code.sample.cluster.NodeActions.{ActiveNodes, GetNodeInfo, NewTickDelay, SendTick, Tick}
 import com.codahale.metrics.MetricRegistry
+import net.jodah.expiringmap.ExpiringMap
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Random
@@ -29,12 +31,16 @@ case class NodeInfo(id: Int,
                     tickDelay: FiniteDuration,
                     oneMinuteRate: Double,
                     meanRate: Double,
+                    processedForPreviousSecond: Int,
                     availableNodes: Seq[String])
 
 class Node(id: Int, var tickDelay: FiniteDuration, registry: MetricRegistry) extends Actor {
   val log = Logging(context.system, this)
   val tickMeterName = s"${self.path.name}.ticks"
   val tickMeter = registry.meter(tickMeterName)
+  val lastSecondTicks = ExpiringMap.builder()
+    .expiration(1, TimeUnit.SECONDS)
+    .build[Long, NodeActions.Tick.type]()
 
   import context.dispatcher
 
@@ -69,7 +75,8 @@ class Node(id: Int, var tickDelay: FiniteDuration, registry: MetricRegistry) ext
 
     case Tick =>
       tickMeter.mark()
-      log.info("tick received")
+      lastSecondTicks.put(System.currentTimeMillis(), Tick)
+      log.info(s"${lastSecondTicks.size()} ticks were processed for previous second")
 
     case GetNodeInfo => sender() ! NodeInfo(
       id,
@@ -77,6 +84,7 @@ class Node(id: Int, var tickDelay: FiniteDuration, registry: MetricRegistry) ext
       tickDelay,
       tickMeter.getOneMinuteRate,
       tickMeter.getMeanRate,
+      lastSecondTicks.size(),
       othersNodes.map(_.path.name).toList.sorted
     )
 

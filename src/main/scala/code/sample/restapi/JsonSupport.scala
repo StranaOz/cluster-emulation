@@ -23,7 +23,7 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
     def read(value: JsValue) = deserializationError("not implemented")
   }
 
-  implicit val nodeInfoFormat = jsonFormat6(NodeInfo)
+  implicit val nodeInfoFormat = jsonFormat7(NodeInfo)
   implicit val activeNodesFormat = jsonFormat1(ActiveNodes)
 }
 
