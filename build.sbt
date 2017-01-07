@@ -4,12 +4,14 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
+mainClass := Some("code.sample.ClusterEmulationApp")
+
 libraryDependencies ++= {
 
   Seq(
     "com.typesafe.akka" %% "akka-actor" % "2.4.14",
-    "com.typesafe.akka" %% "akka-http" % "10.0.0",
-    "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.4.11",
+    "com.typesafe.akka" %% "akka-http" % "10.0.1",
+    "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.1",
     "com.typesafe.akka" %% "akka-remote" % "2.4.16",
 
     "com.iheart" %% "ficus" % "1.4.0",
