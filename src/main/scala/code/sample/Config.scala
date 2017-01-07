@@ -6,7 +6,6 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.duration.FiniteDuration
 
 trait Config {
-
   val conf = ConfigFactory.load()
 
   val tickDuration = conf.as[FiniteDuration]("cluster.tick-duration")
@@ -14,5 +13,4 @@ trait Config {
 
   val host = conf.getString("restapi.host")
   val port = conf.getInt("restapi.port")
-
 }

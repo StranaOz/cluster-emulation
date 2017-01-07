@@ -1,7 +1,7 @@
 package code.sample.restapi
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import code.sample.cluster.NodeManagerActions.ActiveNodes
+import code.sample.cluster.ClusterManagerActions.ActiveNodes
 import code.sample.cluster.{NodeInfo, NodeStatus}
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat, deserializationError}
 

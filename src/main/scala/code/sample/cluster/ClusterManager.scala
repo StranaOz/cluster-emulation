@@ -2,7 +2,7 @@ package code.sample.cluster
 
 import akka.Done
 import akka.actor.{Actor, ActorRef, Props}
-import code.sample.cluster.NodeManagerActions.{ActiveNodes, AddNodes, ChangeTickDelay, GetActiveNodes, StopNode}
+import code.sample.cluster.ClusterManagerActions.{ActiveNodes, AddNodes, ChangeTickDelay, GetActiveNodes, StopNode}
 import com.codahale.metrics.MetricRegistry
 import akka.pattern._
 import akka.util.Timeout
@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.language.postfixOps
 
-object NodeManagerActions {
+object ClusterManagerActions {
   case class AddNodes(count: Int)
   case class StopNode(id: Int)
 
@@ -22,7 +22,7 @@ object NodeManagerActions {
   case class ActiveNodes(nodes: Iterable[NodeInfo])
 }
 
-class NodeManager(var tickDelay: FiniteDuration, registry: MetricRegistry) extends Actor {
+class ClusterManager(var tickDelay: FiniteDuration, registry: MetricRegistry) extends Actor {
 
   implicit val to = Timeout(2 seconds)
   import context.dispatcher
@@ -30,15 +30,20 @@ class NodeManager(var tickDelay: FiniteDuration, registry: MetricRegistry) exten
   var id2ActiveNode = Map.empty[Int, ActorRef]
   var lastId = 0
 
+  def newIds(count: Int) = {
+    val ids = lastId + 1 to (lastId + count)
+    lastId += count
+    ids
+  }
+
   override def receive: Receive = {
 
     case AddNodes(count) =>
-      val id2NewNode = (lastId + 1 to (lastId + count))
+      val id2NewNode = newIds(count)
         .map(id => id -> context.actorOf(Props(classOf[Node], id, tickDelay, registry), s"node-$id")).toMap
 
       id2ActiveNode ++= id2NewNode
       id2ActiveNode.values.foreach(_ ! NodeActions.ActiveNodes(id2ActiveNode.values.toSet))
-      lastId += count
       sender() ! Done
 
     case GetActiveNodes => Future.sequence(
